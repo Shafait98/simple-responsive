@@ -12,10 +12,41 @@
             justify-content: space-between;
             
         }
-        nav a
+        nav a 
         {
             text-decoration: none;
             color: black;
+            
+            
+            
+        }
+        nav a :hover
+        {
+        background-color: aqua;
+        }
+        .login-form-container
+        {
+            display: flex;
+            justify-content: center;
+        }
+        .login-form
+        {
+            display: flex;
+            flex-direction: column;
+            /* justify-content:center;
+            align-items: center; */
+            border: 1px solid black;
+            /* height: 500px; */
+            width: 50%; 
+            
+        }
+
+
+        .login-form input
+        {
+            margin-top: 20px;
+            /* width: 50px; */
+       
             
         }
     </style>
@@ -29,16 +60,24 @@
         <a href="">Protfolio</a>
         <a href="">About us</a>
         </div>
+
         <a href="">Login</a>
     </nav>
 
-    <form action="">
+     <section class="login-form-container">
+
+    <form action="" class="login-form">
         <h3>Login form</h3>
-     <input type="name" name="" id="" placeholder="Name">
-     <input type="email" name="" id="" placeholder="Email">
-      <input type="password" name="" id="" placeholder="Password">
+     <input type="name" name="" id="" placeholder="Name" >
+     <input type="email" name="" id="" placeholder="Email" required>
+     <input type="password" name="" id="" placeholder="Password" required>
+     <input type="submit" value="Login">
 
     </form>
+    
+
+     </section>
+
     
 </body>
 </html>
