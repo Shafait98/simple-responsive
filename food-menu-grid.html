@@ -4,13 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Menu</title>
+
+    <style>
+        
+       .sub-nav
+       {
+        display: flex;
+        gap:10px;
+        justify-content: center;
+        align-items: center;
+       }
+        nav
+        {
+            /* background-color: antiquewhite; */
+            display:flex;
+            justify-content: space-between;
+            align-items: center;
+            height:30px;
+          
+        }
+
+        nav a:hover
+        {
+            color: red;
+        }
+
+        nav a 
+        {
+            text-decoration: none;
+            font-size: 1.06em;
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* color: red; */
+
+        }
+    </style>
 </head>
 <body>
 <header>
     <nav>
+        <div class="sub-nav">
         <a href="">Home</a>
         <a href="">Food</a>
         <a href="">Checkout</a>
+    </div>
         <a href="">About us</a>
 
     </nav>
