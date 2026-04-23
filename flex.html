@@ -4,10 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>responsive flex</title>
+
+    <style>
+        .container
+        {
+            display: flex;
+            gap: 5px;
+        }
+        .box
+        {
+            border: 1px solid red;
+            background-color: rgba(137, 43, 226, 0.874);
+            padding: 15px;
+        }
+
+        @media screen and (max-width: 576px) {
+            .container
+            {
+                flex-wrap: wrap;
+            }
+            
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="box">Lorem ipsum dolor sit amet consectetur adipisicing elit. Architecto velit iusto, facilis assumenda obcaecati, qui ratione blanditiis vero laborum fuga officia quae doloribus eligendi esse pariatur ducimus consectetur voluptas aperiam dolore eum tempora accusantium? Et magnam vitae reiciendis perspiciatis aperiam.</div>
+
         
         <div class="box">Lorem ipsum dolor sit amet consectetur adipisicing elit. Natus nobis repellendus, corrupti numquam deleniti tempore incidunt cum pariatur porro excepturi praesentium aliquam perspiciatis consequuntur sapiente sequi? Impedit fugiat quas et, molestias a expedita quos quaerat fuga, modi eaque ex ipsa.</div>
     </div>
