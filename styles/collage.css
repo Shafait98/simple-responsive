@@ -29,3 +29,20 @@ img
     gap: 5px;
     border: 1px solid black;
 }
+
+/* responsive style  */
+
+@media screen and (max-width:576px) {
+
+    .row 
+    {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .square-collage
+    {
+        grid-template-columns: repeat(1,1fr);
+    }
+    
+}

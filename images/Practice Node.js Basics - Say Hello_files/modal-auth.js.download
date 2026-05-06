@@ -1,0 +1,532 @@
+/**
+ * ModalAuth - Reusable authentication component for practice pages
+ * Supports multiple sizes: full, 300x300, 160x300, 120x300
+ * Includes OAuth providers (Google, Facebook, GitHub, Email) via AWS Cognito
+ * Uses same auth flow as top navigation (avoids Google One Tap origin issues)
+ */
+
+(function() {
+  if (window.ModalAuth) return;
+
+  var ModalAuth = {
+    _styleId: 'practice-auth-style',
+    _defaults: {
+      returnUrl: window.location.href,
+      title: 'Unlock Your Progress',
+      subtitle: 'Sign up to earn XP, track streaks, and save your progress!'
+    },
+    _baseUrl: 'https://profile.w3schools.com',
+    _authUrl: 'https://auth.w3spaces.com',
+    _cognitoClientId: 'd1grqml0emh7votkb0gtrrn0'
+  };
+
+  // OAuth provider configurations
+  var OAuthProviders = {
+    google: {
+      name: 'Google',
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
+      bgColor: '#fff',
+      textColor: '#757575',
+      borderColor: '#ddd'
+    },
+    facebook: {
+      name: 'Facebook',
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+      bgColor: '#1877F2',
+      textColor: '#fff',
+      borderColor: '#1877F2'
+    },
+    github: {
+      name: 'GitHub',
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>',
+      bgColor: '#24292e',
+      textColor: '#fff',
+      borderColor: '#24292e'
+    },
+    email: {
+      name: 'Email',
+      icon: '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
+      bgColor: '#04AA6D',
+      textColor: '#fff',
+      borderColor: '#04AA6D'
+    }
+  };
+
+  // Inject CSS
+  ModalAuth._injectCss = function() {
+    if (document.getElementById(ModalAuth._styleId)) return;
+
+    var css = `
+      .practice-auth-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .practice-auth-modal {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+      }
+      .practice-auth-modal.full {
+        width: 100%;
+        max-width: 450px;
+        min-height: 500px;
+      }
+      .practice-auth-modal.size-300 {
+        width: 300px;
+        height: 300px;
+      }
+      .practice-auth-modal.size-160 {
+        width: 160px;
+        height: 300px;
+      }
+      .practice-auth-modal.size-120 {
+        width: 120px;
+        height: 300px;
+      }
+      .practice-auth-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 10;
+        color: #666;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+      }
+      .practice-auth-close:hover {
+        background: #f0f0f0;
+        color: #333;
+      }
+      .practice-auth-content {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .practice-auth-modal.size-160 .practice-auth-content,
+      .practice-auth-modal.size-120 .practice-auth-content {
+        padding: 12px;
+      }
+      .practice-auth-header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .practice-auth-modal.size-160 .practice-auth-header,
+      .practice-auth-modal.size-120 .practice-auth-header {
+        margin-bottom: 12px;
+      }
+      .practice-auth-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #282A35;
+        margin: 0 0 8px;
+      }
+      .practice-auth-modal.size-160 .practice-auth-title,
+      .practice-auth-modal.size-120 .practice-auth-title {
+        font-size: 14px;
+      }
+      .practice-auth-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+      }
+      .practice-auth-modal.size-160 .practice-auth-subtitle,
+      .practice-auth-modal.size-120 .practice-auth-subtitle {
+        font-size: 11px;
+      }
+      .practice-auth-providers {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: 1;
+      }
+      .practice-auth-modal.size-160 .practice-auth-providers,
+      .practice-auth-modal.size-120 .practice-auth-providers {
+        gap: 8px;
+      }
+      .practice-auth-provider-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .practice-auth-modal.size-160 .practice-auth-provider-btn,
+      .practice-auth-modal.size-120 .practice-auth-provider-btn {
+        padding: 10px;
+        font-size: 0;
+      }
+      .practice-auth-provider-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      }
+      .practice-auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 16px 0;
+        color: #888;
+        font-size: 12px;
+      }
+      .practice-auth-divider::before,
+      .practice-auth-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e0e0e0;
+      }
+      .practice-auth-modal.size-160 .practice-auth-divider,
+      .practice-auth-modal.size-120 .practice-auth-divider {
+        margin: 12px 0;
+        font-size: 10px;
+      }
+      .practice-auth-footer {
+        text-align: center;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e0e0e0;
+      }
+      .practice-auth-modal.size-160 .practice-auth-footer,
+      .practice-auth-modal.size-120 .practice-auth-footer {
+        margin-top: 12px;
+        padding-top: 12px;
+      }
+      .practice-auth-footer-text {
+        font-size: 13px;
+        color: #666;
+        margin: 0;
+      }
+      .practice-auth-modal.size-160 .practice-auth-footer-text,
+      .practice-auth-modal.size-120 .practice-auth-footer-text {
+        font-size: 10px;
+      }
+      .practice-auth-link {
+        color: #04AA6D;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .practice-auth-link:hover {
+        text-decoration: underline;
+      }
+      .practice-auth-inline {
+        background: #E7F5EE;
+        border: 2px solid #04AA6D;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .practice-auth-inline.full {
+        max-width: 450px;
+        margin: 0 auto;
+      }
+      .practice-auth-inline.small {
+        display: inline-block;
+        min-width: 300px;
+      }
+      .practice-auth-inline.compact {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+      }
+      .practice-auth-inline.compact-160 {
+        width: 160px;
+        padding: 12px;
+      }
+      .practice-auth-inline.compact-120 {
+        width: 120px;
+        padding: 10px;
+      }
+      @media (max-width: 480px) {
+        .practice-auth-modal.full {
+          max-width: 100%;
+          min-height: 100%;
+          border-radius: 0;
+        }
+        .practice-auth-overlay {
+          padding: 0;
+        }
+      }
+    `;
+
+    var style = document.createElement('style');
+    style.id = ModalAuth._styleId;
+    style.textContent = css;
+    document.head.appendChild(style);
+  };
+
+  // Generate state parameter for OAuth security
+  ModalAuth._generateState = function() {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var result = '';
+    for (var i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  // Open OAuth popup (same as top nav)
+  ModalAuth._openOAuthPopup = function(url, returnUrl) {
+    // Set redirect cookie (same as top nav)
+    document.cookie = 'socialLoginRedirectUrl=' + encodeURIComponent(returnUrl) + '; path=/; domain=.w3schools.com; secure; samesite=strict';
+    
+    var width = 450;
+    var height = 450;
+    var left = (window.innerWidth - width) / 2;
+    var top = (window.innerHeight - height) / 2;
+    
+    var popup = window.open(url, '_blank', 'width=' + width + ',height=' + height + ',left=' + left + ',top=' + top + ',popup=1');
+    
+    // Fallback to redirect if popup blocked
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      window.location.href = url;
+    }
+    
+    // Close the modal since we're now in the popup
+    ModalAuth.closeModal();
+  };
+
+  // Open login in new tab for regular email/password login
+  ModalAuth._openLoginPopup = function(returnUrl) {
+    var url = ModalAuth._baseUrl + '/log-in?redirect_url=' + encodeURIComponent(returnUrl || window.location.href);
+    window.open(url, '_blank');
+    ModalAuth.closeModal();
+  };
+
+  // Generate OAuth provider button HTML using Cognito (same as top nav)
+  ModalAuth._renderProviderButton = function(provider, size, returnUrl) {
+    var cfg = OAuthProviders[provider];
+    var isCompact = size === '160' || size === '120';
+    
+    // Map provider names to Cognito identity provider names
+    var identityProvider = {
+      'google': 'Google',
+      'facebook': 'Facebook',
+      'github': 'Github',
+      'email': 'COGNITO'  // Email uses Cognito's built-in flow
+    }[provider] || provider;
+    
+    var state = ModalAuth._generateState();
+    var redirectUri = encodeURIComponent(ModalAuth._baseUrl + '/social-login');
+    var finalReturnUrl = encodeURIComponent(returnUrl);
+    
+    var href = ModalAuth._authUrl + '/oauth2/authorize' +
+               '?redirect_uri=' + redirectUri +
+               '&response_type=code' +
+               '&client_id=' + ModalAuth._cognitoClientId +
+               '&identity_provider=' + identityProvider +
+               '&scope=openid%20aws.cognito.signin.user.admin' +
+               '&state=' + state +
+               '&final_return=' + finalReturnUrl;
+    
+    // Use onclick to open popup instead of href
+    var onclick = 'event.preventDefault(); ModalAuth._openOAuthPopup(\'' + href + '\', \'' + returnUrl + '\');';
+    
+    return '<a href="' + href + '" ' +
+           'onclick="' + onclick + '" ' +
+           'class="practice-auth-provider-btn ga-featured ga-auth-' + provider + '" ' +
+           'style="background:' + cfg.bgColor + ';color:' + cfg.textColor + ';border-color:' + cfg.borderColor + '" ' +
+           'title="Continue with ' + cfg.name + '">' +
+           cfg.icon +
+           (!isCompact ? '<span>Continue with ' + cfg.name + '</span>' : '') +
+           '</a>';
+  };
+
+  // Render full-size modal content
+  ModalAuth._renderFullContent = function(config) {
+    var returnUrl = encodeURIComponent(config.returnUrl || ModalAuth._defaults.returnUrl);
+    
+    var html = '<div class="practice-auth-header">' +
+               '<h3 class="practice-auth-title">' + (config.title || ModalAuth._defaults.title) + '</h3>' +
+               '<p class="practice-auth-subtitle">' + (config.subtitle || ModalAuth._defaults.subtitle) + '</p>' +
+               '</div>';
+
+    // Provider buttons (using Cognito OAuth like top nav)
+    html += '<div class="practice-auth-providers">';
+    ['google', 'facebook', 'github', 'email'].forEach(function(provider) {
+      html += ModalAuth._renderProviderButton(provider, 'full', returnUrl);
+    });
+    html += '</div>';
+
+    // Footer with sign in/up toggle (opens popup)
+    var signinOnclick = 'event.preventDefault(); ModalAuth._openLoginPopup(\'' + config.returnUrl + '\');';
+    html += '<div class="practice-auth-footer">';
+    html += '<p class="practice-auth-footer-text">' +
+            'Already have an account? <a href="' + ModalAuth._baseUrl + '/log-in?redirect_url=' + returnUrl + '" ' +
+            'onclick="' + signinOnclick + '" ' +
+            'class="practice-auth-link ga-featured ga-auth-signin-link">Sign in</a>' +
+            '</p>';
+    html += '</div>';
+
+    return html;
+  };
+
+  // Render compact content (300x300, 160x300, 120x300)
+  ModalAuth._renderCompactContent = function(config, size) {
+    var returnUrl = encodeURIComponent(config.returnUrl || ModalAuth._defaults.returnUrl);
+    var providers = config.providers || ['google', 'facebook', 'github', 'email'];
+    
+    var html = '<div class="practice-auth-header">';
+    html += '<h3 class="practice-auth-title">' + (config.title || 'Sign In') + '</h3>';
+    if (size !== '120' && size !== '160') {
+      html += '<p class="practice-auth-subtitle">' + (config.subtitle || ModalAuth._defaults.subtitle) + '</p>';
+    }
+    html += '</div>';
+
+    // Provider buttons only
+    html += '<div class="practice-auth-providers">';
+    providers.forEach(function(provider) {
+      html += ModalAuth._renderProviderButton(provider, size, returnUrl);
+    });
+    html += '</div>';
+
+    // Small footer link for more options (opens popup)
+    var moreOnclick = 'event.preventDefault(); ModalAuth._openLoginPopup(\'' + config.returnUrl + '\');';
+    html += '<div class="practice-auth-footer">';
+    html += '<p class="practice-auth-footer-text">' +
+            '<a href="' + ModalAuth._baseUrl + '/log-in?redirect_url=' + returnUrl + '" ' +
+            'onclick="' + moreOnclick + '" ' +
+            'class="practice-auth-link ga-featured ga-auth-more-options">More options</a>' +
+            '</p>';
+    html += '</div>';
+
+    return html;
+  };
+
+  // Show modal
+  ModalAuth.showModal = function(options) {
+    options = options || {};
+    ModalAuth._injectCss();
+
+    var size = options.size || 'full';
+    var sizeClass = size === 'full' ? 'full' : 'size-' + size;
+
+    // Create overlay
+    var overlay = document.createElement('div');
+    overlay.id = 'practice-auth-overlay';
+    overlay.className = 'practice-auth-overlay';
+
+    // Create modal
+    var modal = document.createElement('div');
+    modal.className = 'practice-auth-modal ' + sizeClass;
+
+    // Close button
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'practice-auth-close ga-featured ga-auth-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.onclick = ModalAuth.closeModal;
+    modal.appendChild(closeBtn);
+
+    // Content container
+    var content = document.createElement('div');
+    content.className = 'practice-auth-content';
+
+    if (size === 'full') {
+      content.innerHTML = ModalAuth._renderFullContent(options);
+    } else {
+      content.innerHTML = ModalAuth._renderCompactContent(options, size);
+    }
+
+    modal.appendChild(content);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.onclick = function(e) {
+      if (e.target === overlay) ModalAuth.closeModal();
+    };
+
+    // ESC to close
+    document.addEventListener('keydown', ModalAuth._handleEsc);
+  };
+
+  // Close modal
+  ModalAuth.closeModal = function() {
+    var overlay = document.getElementById('practice-auth-overlay');
+    if (overlay) {
+      overlay.remove();
+    }
+    document.removeEventListener('keydown', ModalAuth._handleEsc);
+  };
+
+  // Handle ESC key
+  ModalAuth._handleEsc = function(e) {
+    if (e.key === 'Escape') ModalAuth.closeModal();
+  };
+
+  // Render inline (not modal)
+  ModalAuth.renderInline = function(containerId, options) {
+    options = options || {};
+    ModalAuth._injectCss();
+
+    var container = document.getElementById(containerId);
+    if (!container) {
+      console.error('ModalAuth: Container not found:', containerId);
+      return;
+    }
+
+    var size = options.size || 'full';
+    var sizeClass = size === 'full' ? 'full' : 
+                    size === '300' ? 'small' : 
+                    size === '160' ? 'compact-160' : 'compact-120';
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'practice-auth-inline ' + sizeClass;
+
+    if (size === 'full') {
+      wrapper.innerHTML = ModalAuth._renderFullContent(options);
+    } else {
+      wrapper.innerHTML = ModalAuth._renderCompactContent(options, size);
+    }
+
+    container.innerHTML = '';
+    container.appendChild(wrapper);
+  };
+
+  // Quick helper methods
+  ModalAuth.showFull = function(options) {
+    return ModalAuth.showModal(Object.assign({ size: 'full' }, options));
+  };
+
+  ModalAuth.show300x300 = function(options) {
+    return ModalAuth.showModal(Object.assign({ size: '300' }, options));
+  };
+
+  ModalAuth.show160x300 = function(options) {
+    return ModalAuth.showModal(Object.assign({ size: '160' }, options));
+  };
+
+  ModalAuth.show120x300 = function(options) {
+    return ModalAuth.showModal(Object.assign({ size: '120' }, options));
+  };
+
+  window.ModalAuth = ModalAuth;
+})();
